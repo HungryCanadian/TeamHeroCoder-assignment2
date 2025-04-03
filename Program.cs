@@ -252,8 +252,31 @@ namespace PlayerCoder
                 //LOWEST PRIORITY CHECK GOES HERE
 
             }
+            else if (TeamHeroCoder.BattleState.heroWithInitiative.jobClass == HeroJobClass.Monk)
+            {
+                //The character with initiative is a cleric, do something here...
+                activeHero = TeamHeroCoder.BattleState.heroWithInitiative;
+
+                Console.WriteLine("this is a Monk");
+                Hero target = null;
+
+                foreach (Hero hero in TeamHeroCoder.BattleState.foeHeroes)
+                {
+                    if (hero.health > 0)
+                    {
+                        if (target == null)
+                            target = hero;
+                        else if (hero.health < target.health)
+                            target = hero;
+                    }
+                }
+
+                //This is the line of code that tells Team Hero Coder that we want to perform the attack action and target the foe with the lowest HP
+                TeamHeroCoder.PerformHeroAbility(Ability.FlurryOfBlows, target);
+            }
             else if (TeamHeroCoder.BattleState.heroWithInitiative.jobClass == HeroJobClass.Cleric)
             {
+                activeHero = TeamHeroCoder.BattleState.heroWithInitiative;
                 //The character with initiative is a cleric, do something here...
 
                 Console.WriteLine("this is a cleric");
@@ -276,9 +299,28 @@ namespace PlayerCoder
             else if (TeamHeroCoder.BattleState.heroWithInitiative.jobClass == HeroJobClass.Wizard)
             {
                 //The character with initiative is a wizard, do something here...
+                activeHero = TeamHeroCoder.BattleState.heroWithInitiative;
 
                 Console.WriteLine("this is a wizard");
                 Hero target = null;
+                int poisonNovaCost = 15;
+
+                if (activeHero.mana >= poisonNovaCost)
+                {
+                    Console.WriteLine("Wizard's total MP is greater than the cost of Poison Nova!");
+                    foreach (Hero h in TeamHeroCoder.BattleState.foeHeroes)
+                    {
+                        foreach (StatusEffectAndDuration se in h.statusEffectsAndDurations)
+                        {
+                            if (se.statusEffect != StatusEffect.Poison)
+                            {
+                                Console.WriteLine("Target is not Poisoned. Casting Poison Nova");
+                                AttemptToPerformAction(Ability.PoisonNova, h);
+                            }
+                        }
+                        
+                    }
+                }
 
                 foreach (Hero hero in TeamHeroCoder.BattleState.foeHeroes)
                 {
@@ -305,22 +347,6 @@ namespace PlayerCoder
                 }
             }
 
-            ////Find the foe with the lowest health
-            //Hero target = null;
-
-            //foreach (Hero hero in TeamHeroCoder.BattleState.foeHeroes)
-            //{
-            //    if (hero.health > 0)
-            //    {
-            //        if (target == null)
-            //            target = hero;
-            //        else if (hero.health < target.health)
-            //            target = hero;
-            //    }
-            //}
-
-            ////This is the line of code that tells Team Hero Coder that we want to perform the attack action and target the foe with the lowest HP
-            //TeamHeroCoder.PerformHeroAbility(Ability.Attack, target);
 
             //Searching for a poisoned hero 
             foreach (Hero hero in TeamHeroCoder.BattleState.allyHeroes)
