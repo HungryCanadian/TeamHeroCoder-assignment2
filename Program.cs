@@ -564,7 +564,7 @@ namespace PlayerCoder
                 hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Attack, target);
             }
             #endregion Wizard
-
+            #region samplecode
             foreach (InventoryItem ii in TeamHeroCoder.BattleState.allyInventory)
             {
                 //How we look THROUGH our inventory
@@ -586,7 +586,7 @@ namespace PlayerCoder
                     }
                 }
             }
-            
+            #endregion samplecode
             #endregion
 
         }
