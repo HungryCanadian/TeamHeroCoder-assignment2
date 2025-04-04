@@ -262,17 +262,56 @@ namespace PlayerCoder
 
                 foreach (Hero hero in TeamHeroCoder.BattleState.foeHeroes)
                 {
+
+                    foreach (StatusEffectAndDuration se in hero.statusEffectsAndDurations)
+                    {
+                        Console.WriteLine("Checking for Brave!");
+                        if (se.statusEffect == StatusEffect.Brave)
+                        {
+                            Console.WriteLine("Target is Brave. Make them a coward!");
+                            AttemptToPerformAction(Ability.Debrave, hero);
+                        }
+                    }
+                }
+                foreach (Hero hero in TeamHeroCoder.BattleState.foeHeroes)
+                {
+                    Console.WriteLine("Checking if they have Faith!");
+                    foreach (StatusEffectAndDuration se in hero.statusEffectsAndDurations)
+                    {
+                        if (se.statusEffect == StatusEffect.Faith)
+                        {
+                            Console.WriteLine("Target has Faith. Casting Blasphemy");
+                            AttemptToPerformAction(Ability.Defaith, hero);
+                        }
+                    }
+                }
+                foreach (Hero hero in TeamHeroCoder.BattleState.foeHeroes)
+                {
+                    Console.WriteLine("Checking if anyone is Poisoned");
+                    foreach (StatusEffectAndDuration se in hero.statusEffectsAndDurations)
+                    {
+                        if (se.statusEffect == StatusEffect.Poison)
+                        {
+                            Console.WriteLine("Target is Poisoned. Hit them where it hurts!");
+                            AttemptToPerformAction(Ability.FlurryOfBlows, hero);
+                        }
+                    }
+                }
+                
+                
+                foreach (Hero hero in TeamHeroCoder.BattleState.foeHeroes)
+                {
+                    Console.WriteLine("No Statuses on Enemy team. Punch lowest health enemy in the face!");
                     if (hero.health > 0)
                     {
                         if (target == null)
                             target = hero;
                         else if (hero.health < target.health)
                             target = hero;
+                        AttemptToPerformAction(Ability.Attack, target);
                     }
                 }
-
-                //This is the line of code that tells Team Hero Coder that we want to perform the attack action and target the foe with the lowest HP
-                TeamHeroCoder.PerformHeroAbility(Ability.FlurryOfBlows, target);
+              
             }
             else if (TeamHeroCoder.BattleState.heroWithInitiative.jobClass == HeroJobClass.Cleric)
             {
