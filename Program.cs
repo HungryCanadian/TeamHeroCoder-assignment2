@@ -30,9 +30,10 @@ namespace PlayerCoder
         {
             Console.WriteLine("Processing AI!");
             Hero activeHero = null;
+            bool hasPerformedAction = false;
 
-            #region SampleCode
-
+            #region Code
+            #region Fighter
             if (TeamHeroCoder.BattleState.heroWithInitiative.jobClass == HeroJobClass.Fighter)
             {
                 Console.WriteLine("this is a fighter");
@@ -57,7 +58,7 @@ namespace PlayerCoder
                             {
                                 Console.WriteLine("We have the Mana for Ressurection. Casting it.");
                                 //Placeholder calling the function note for us
-                                AttemptToPerformAction(Ability.Resurrection, ally);
+                                hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Resurrection, ally);
                             }
                         }
                     }
@@ -84,7 +85,7 @@ namespace PlayerCoder
                     if ((float)ally.mana / (float)ally.maxMana <= 0.35 && hasEther)
                     {
                         Console.WriteLine("An ally is below 35% Mana. Using an Ether");
-                        TeamHeroCoder.PerformHeroAbility(Ability.Ether, ally);
+                        hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Ether, ally);
                     }
                 }
 
@@ -129,7 +130,7 @@ namespace PlayerCoder
                     if (shouldCastBrave)
                     {
                         Console.WriteLine("We have determined that casting brave is a good idea.");
-                        TeamHeroCoder.PerformHeroAbility(Ability.Brave, activeHero);
+                        hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Brave, activeHero);
                     }
                 }
 
@@ -157,7 +158,7 @@ namespace PlayerCoder
                         if (se.statusEffect == StatusEffect.Poison && haspoisonremedy)
                         {
                             Console.WriteLine("Using Poison Rem");
-                            TeamHeroCoder.PerformHeroAbility(Ability.PoisonRemedy, ally);
+                            hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.PoisonRemedy, ally);
                         }
                     }
                 }
@@ -187,11 +188,11 @@ namespace PlayerCoder
                         {
                             Console.WriteLine("Cleric's initiavePercent <= 50 and there is an ally below 40% Health. Casting Cure Serious");
 
-                            TeamHeroCoder.PerformHeroAbility(Ability.CureSerious, cleric);
+                            hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.CureSerious, cleric);
                         }
                         else if (lowHP.Contains(hero))
                         {
-                            TeamHeroCoder.PerformHeroAbility(Ability.CureSerious, hero);
+                            hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.CureSerious, hero);
                         }
                     }
                 }
@@ -212,7 +213,7 @@ namespace PlayerCoder
                             quickHitTarget = hero;
 
                         Console.WriteLine("We found a " + hero.jobClass + "in opposing team. Using Quick Hit");
-                        TeamHeroCoder.PerformHeroAbility(Ability.QuickHit, hero);
+                        hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.QuickHit, hero);
                     }
                 }
 
@@ -224,7 +225,7 @@ namespace PlayerCoder
                         if (h.jobClass == HeroJobClass.Alchemist || h.jobClass == HeroJobClass.Rogue)
                         {
                             Console.WriteLine("We found a " + h.jobClass + "in opposing team. Using Quick Hit");
-                            TeamHeroCoder.PerformHeroAbility(Ability.QuickHit, h);
+                            hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.QuickHit, h);
                             return;
                         }
                     }
@@ -252,6 +253,8 @@ namespace PlayerCoder
                 //LOWEST PRIORITY CHECK GOES HERE
 
             }
+            #endregion Fighter
+            #region Monk
             else if (TeamHeroCoder.BattleState.heroWithInitiative.jobClass == HeroJobClass.Monk)
             {
                 //The character with initiative is a cleric, do something here...
@@ -262,14 +265,13 @@ namespace PlayerCoder
 
                 foreach (Hero hero in TeamHeroCoder.BattleState.foeHeroes)
                 {
-
+                    Console.WriteLine("Checking for Brave!");
                     foreach (StatusEffectAndDuration se in hero.statusEffectsAndDurations)
                     {
-                        Console.WriteLine("Checking for Brave!");
                         if (se.statusEffect == StatusEffect.Brave)
                         {
                             Console.WriteLine("Target is Brave. Make them a coward!");
-                            AttemptToPerformAction(Ability.Debrave, hero);
+                            hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Debrave, hero);
                         }
                     }
                 }
@@ -281,7 +283,7 @@ namespace PlayerCoder
                         if (se.statusEffect == StatusEffect.Faith)
                         {
                             Console.WriteLine("Target has Faith. Casting Blasphemy");
-                            AttemptToPerformAction(Ability.Defaith, hero);
+                            hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Defaith, hero);
                         }
                     }
                 }
@@ -293,12 +295,12 @@ namespace PlayerCoder
                         if (se.statusEffect == StatusEffect.Poison)
                         {
                             Console.WriteLine("Target is Poisoned. Hit them where it hurts!");
-                            AttemptToPerformAction(Ability.FlurryOfBlows, hero);
+                            hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.FlurryOfBlows, hero);
                         }
                     }
                 }
-                
-                
+
+
                 foreach (Hero hero in TeamHeroCoder.BattleState.foeHeroes)
                 {
                     Console.WriteLine("No Statuses on Enemy team. Punch lowest health enemy in the face!");
@@ -308,11 +310,12 @@ namespace PlayerCoder
                             target = hero;
                         else if (hero.health < target.health)
                             target = hero;
-                        AttemptToPerformAction(Ability.Attack, target);
                     }
                 }
-              
+                hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Attack, target);
             }
+            #endregion Monk
+            #region Cleric
             else if (TeamHeroCoder.BattleState.heroWithInitiative.jobClass == HeroJobClass.Cleric)
             {
                 activeHero = TeamHeroCoder.BattleState.heroWithInitiative;
@@ -321,42 +324,45 @@ namespace PlayerCoder
 
                 Console.WriteLine("this is a cleric");
                 Hero target = null;
-                Hero allyHero = null;
                 const int MASS_HEAL_COST = 20;
                 const int RESURRECTION_COST = 25;
                 const int AUTO_LIFE_COST = 25;
 
                 float useEtherAmount = 0.3f;
 
-                foreach (Hero allyhero in TeamHeroCoder.BattleState.allyHeroes)
-                {
-                    if ((float)allyHero.mana / (float)allyHero.maxMana <= useEtherAmount)
-                    {
-                        Console.WriteLine("found an Ally with less then 30% mana. do we have an Ether?");
-                        foreach (InventoryItem ii in TeamHeroCoder.BattleState.allyInventory)
-                        {
-                            //How we look THROUGH our inventory
-                            if (ii.item == Item.Ether)
-                            {
-                                Console.WriteLine("We found an Ether in our inventory");
-                            }
-                        }
-                        Console.WriteLine("Shove an Ether down their throat!");
-                        AttemptToPerformAction(Ability.Ether, allyHero);
-                    }
-                }
                 foreach (Hero ally in TeamHeroCoder.BattleState.allyHeroes)
                 {
                     if ((float)ally.health / ally.maxHealth <= 0.3f)
                     {
                         Console.WriteLine("We found a wounded ally");
-                        if (activeHero.mana >= MASS_HEAL_COST + RESURRECTION_COST)
+                        if (activeHero.mana >= MASS_HEAL_COST + RESURRECTION_COST && ally.health > 0)
                         {
                             Console.WriteLine("We have the Mana for Mass heal with enough left over for Resurrection. Casting it.");
-                            //Placeholder calling the function note for us
-                            AttemptToPerformAction(Ability.MassHeal, ally);
+
+                            hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.MassHeal, ally);
                         }
                         Console.WriteLine("We dont have enough mana to make sure we can cast resurrection, skipping the heal.");
+                    }
+                }
+
+                bool hasEther = false;
+                Console.WriteLine("Do we have any Ethers?");
+                foreach (InventoryItem item in TeamHeroCoder.BattleState.allyInventory)
+                {
+                    if (item.item == Item.Ether)
+                    {
+                        Console.WriteLine("We still have Ethers");
+                        hasEther = true;
+                    }
+                }
+
+                foreach (Hero ally in TeamHeroCoder.BattleState.allyHeroes)
+                {
+                    if ((float)ally.mana / (float)ally.maxMana <= 0.30 && hasEther)
+                    {
+                        Console.WriteLine("An ally is below 30% Mana. Force them to drink!");
+                        hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Ether, ally);
+
                     }
                 }
                 foreach (Hero ally in TeamHeroCoder.BattleState.allyHeroes)
@@ -367,8 +373,7 @@ namespace PlayerCoder
                         if (activeHero.mana >= RESURRECTION_COST)
                         {
                             Console.WriteLine("We have the Mana to revive someone! REVIVE THEM!");
-                            //Placeholder calling the function note for us
-                            AttemptToPerformAction(Ability.Resurrection, ally);
+                            hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Resurrection, ally);
                         }
                         Console.WriteLine("We dont have enough mana. skipping");
                     }
@@ -376,19 +381,32 @@ namespace PlayerCoder
                 foreach (Hero ally in TeamHeroCoder.BattleState.allyHeroes)
                 {
                     Console.WriteLine("No Healing or Revive needed. AUTO LIFE EVERYTHING!");
+                    bool hasAutoLife = false; // Reset hasAutoLife for each hero
+
                     foreach (StatusEffectAndDuration se in ally.statusEffectsAndDurations)
                     {
-                        if (se.statusEffect != StatusEffect.AutoLife)
+                        if (se.statusEffect == StatusEffect.AutoLife)
                         {
-                            if (activeHero.mana >= AUTO_LIFE_COST)
-                            {
-                                Console.WriteLine("We have the Mana for Auto Life!");
-                                AttemptToPerformAction(Ability.AutoLife, ally);
-                            }
-                            Console.WriteLine("Everyone has Auto Life or we dont have enough mana!");
+                            Console.WriteLine("We found an ally with Auto Life, skipping this hero");
+                            hasAutoLife = true;
+                            break;
+                        }
+                    }
+
+                    if (!hasAutoLife)
+                    {
+                        if (activeHero.mana >= AUTO_LIFE_COST)
+                        {
+                            Console.WriteLine("We have the Mana for Auto Life!");
+                            hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.AutoLife, ally);
+                            hasAutoLife = true;
                         }
                     }
                 }
+                Console.WriteLine("Everyone has Auto Life or we dont have enough mana!");
+                    
+                    
+                
                     Console.WriteLine("No Healing or Revive needed. Everyone has Auto life.... ummmmm Hit the weakest person?");
                     foreach (Hero hero in TeamHeroCoder.BattleState.foeHeroes)
                     {
@@ -402,57 +420,76 @@ namespace PlayerCoder
                     }
 
 
-                    TeamHeroCoder.PerformHeroAbility(Ability.Attack, target);
-                }
+                hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Attack, target);
+            }
+            #endregion Cleric
+            #region Wizard
             else if (TeamHeroCoder.BattleState.heroWithInitiative.jobClass == HeroJobClass.Wizard)
             {
                 //The character with initiative is a wizard, do something here...
                 activeHero = TeamHeroCoder.BattleState.heroWithInitiative;
-                Hero allyHero = null;
 
                 Console.WriteLine("this is a wizard");
                 Hero target = null;
-                Hero allyHero = null;
                 const int POISON_NOVA_COST = 15;
                 const int MAGIC_MISSILE_COST = 10;
+                const int METEOR_COST = 60;
 
                 float useEtherAmount = 0.3f;
 
-                foreach (Hero allyhero in TeamHeroCoder.BattleState.allyHeroes)
+                bool hasEther = false;
+                Console.WriteLine("Do we have any Ethers?");
+                foreach (InventoryItem item in TeamHeroCoder.BattleState.allyInventory)
                 {
-                    if ((float)allyHero.mana / (float)allyHero.maxMana <= useEtherAmount)
+                    if (item.item == Item.Ether)
                     {
-                        Console.WriteLine("found an Ally with less then 30% mana. do we have an Ether?");
-                        foreach (InventoryItem ii in TeamHeroCoder.BattleState.allyInventory)
-                        {
-                            //How we look THROUGH our inventory
-                            if (ii.item == Item.Ether)
-                            {
-                                Console.WriteLine("We found an Ether in our inventory");
-                            }
-                        }
-                        Console.WriteLine("Shove an Ether down their throat!");
-                        AttemptToPerformAction(Ability.Ether, allyHero);
+                        Console.WriteLine("We still have Ethers");
+                        hasEther = true;
+                    }
+                }
+
+                foreach (Hero ally in TeamHeroCoder.BattleState.allyHeroes)
+                {
+                    if ((float)ally.mana / (float)ally.maxMana <= 0.30 && hasEther)
+                    {
+                        Console.WriteLine("An ally is below 30% Mana. Using an Ether");
+                        hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Ether, ally);
+
                     }
                 }
 
                 if (activeHero.mana >= POISON_NOVA_COST)
-
                 {
                     Console.WriteLine("Wizard's total MP is greater than the cost of Poison Nova!");
-                    foreach (Hero h in TeamHeroCoder.BattleState.foeHeroes)
+
+                    foreach (Hero foe in TeamHeroCoder.BattleState.foeHeroes)
                     {
-                        foreach (StatusEffectAndDuration se in h.statusEffectsAndDurations)
+                        bool hasPoisonEffect = false;
+
+
+                        foreach (StatusEffectAndDuration se in foe.statusEffectsAndDurations)
                         {
-                            if (se.statusEffect != StatusEffect.Poison)
+                            if (se.statusEffect == StatusEffect.Poison)
                             {
-                                Console.WriteLine("Target is not Poisoned. Casting Poison Nova");
-                                AttemptToPerformAction(Ability.PoisonNova, h);
+                                Console.WriteLine("We found a poisoned enemy, skipping this one");
+                                hasPoisonEffect = true;
+                                break; // Stop checking once we find Poison
                             }
                         }
-                        
+
+                        // If the foe isn't poisoned and has health, apply Poison Nova
+                        if (!hasPoisonEffect && foe.health > 0)
+                        {
+                            Console.WriteLine("We have the Mana for Poison Nova!");
+                            hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.PoisonNova, foe);
+                        }
                     }
                 }
+                else
+                {
+                    Console.WriteLine("Not enough mana for Poison Nova!");
+                }
+
                 List<Hero> standingFoes = new List<Hero>();
 
                 foreach (Hero foe in TeamHeroCoder.BattleState.foeHeroes)
@@ -464,10 +501,10 @@ namespace PlayerCoder
                 }
 
                 // Use Meteor if 2 or more foes are still standing
-                if (standingFoes.Count >= 2)
+                if (standingFoes.Count >= 2 && activeHero.mana >= METEOR_COST)
                 {
                     Console.WriteLine("More than 2 foes standing, Make them regret it! METEOR!");
-                    AttemptToPerformAction(Ability.Meteor, standingFoes[0]);
+                    hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Meteor, target);
                     return;
                 }
 
@@ -486,12 +523,12 @@ namespace PlayerCoder
                 if (activeHero.mana >= MAGIC_MISSILE_COST)
                 {
                     Console.WriteLine("Magic Missile!");
-                    AttemptToPerformAction(Ability.MagicMissile, target);
+                    hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.MagicMissile, target);
                 }
                 Console.WriteLine("out of Mana! hit them with your stick!");
-                AttemptToPerformAction(Ability.Attack, target);
+                hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Attack, target);
             }
-
+            #endregion Wizard
 
             foreach (InventoryItem ii in TeamHeroCoder.BattleState.allyInventory)
             {
@@ -514,18 +551,20 @@ namespace PlayerCoder
                     }
                 }
             }
-
+            
             #endregion
 
         }
 
-        static void AttemptToPerformAction(Ability ability, Hero target)
+        static public bool AttemptToPerformAction(bool hasPerformedAction, Ability ability, Hero target)
         {
             if (!hasPerformedAction)
             {
                 TeamHeroCoder.PerformHeroAbility(ability, target);
-                hasPerformedAction = true;
+                return true;
             }
+
+            return false;
         }
     }
 }
