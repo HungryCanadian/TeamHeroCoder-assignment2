@@ -373,10 +373,32 @@ namespace PlayerCoder
 
                 Console.WriteLine("this is a wizard");
                 Hero target = null;
-                int poisonNovaCost = 15;
+                Hero allyHero = null;
+                const int POISON_NOVA_COST = 15;
+                const int MAGIC_MISSILE_COST = 10;
 
+                float useEtherAmount = 0.3f;
 
-                if (activeHero.mana >= poisonNovaCost)
+                foreach (Hero allyhero in TeamHeroCoder.BattleState.allyHeroes)
+                {
+                    if ((float)allyHero.mana / (float)allyHero.maxMana <= useEtherAmount)
+                    {
+                        Console.WriteLine("found an Ally with less then 30% mana. do we have an Ether?");
+                        foreach (InventoryItem ii in TeamHeroCoder.BattleState.allyInventory)
+                        {
+                            //How we look THROUGH our inventory
+                            if (ii.item == Item.Ether)
+                            {
+                                Console.WriteLine("We found an Ether in our inventory");
+                            }
+                        }
+                        Console.WriteLine("Shove an Ether down their throat!");
+                        AttemptToPerformAction(Ability.Ether, allyHero);
+                    }
+                }
+
+                if (activeHero.mana >= POISON_NOVA_COST)
+
                 {
                     Console.WriteLine("Wizard's total MP is greater than the cost of Poison Nova!");
                     foreach (Hero h in TeamHeroCoder.BattleState.foeHeroes)
@@ -392,6 +414,23 @@ namespace PlayerCoder
                         
                     }
                 }
+                List<Hero> standingFoes = new List<Hero>();
+
+                foreach (Hero foe in TeamHeroCoder.BattleState.foeHeroes)
+                {
+                    if (foe.health > 0)
+                    {
+                        standingFoes.Add(foe);
+                    }
+                }
+
+                // Use Meteor if 2 or more foes are still standing
+                if (standingFoes.Count >= 2)
+                {
+                    Console.WriteLine("More than 2 foes standing, Make them regret it! METEOR!");
+                    AttemptToPerformAction(Ability.Meteor, standingFoes[0]);
+                    return;
+                }
 
                 foreach (Hero hero in TeamHeroCoder.BattleState.foeHeroes)
                 {
@@ -404,8 +443,14 @@ namespace PlayerCoder
                     }
                 }
 
-                //This is the line of code that tells Team Hero Coder that we want to perform the attack action and target the foe with the lowest HP
-                TeamHeroCoder.PerformHeroAbility(Ability.Attack, target);
+                Console.WriteLine("Nothing to do! Targeting enemy with lowest HP");
+                if (activeHero.mana >= MAGIC_MISSILE_COST)
+                {
+                    Console.WriteLine("Magic Missile!");
+                    AttemptToPerformAction(Ability.MagicMissile, target);
+                }
+                Console.WriteLine("out of Mana! hit them with your stick!");
+                AttemptToPerformAction(Ability.Attack, target);
             }
 
 
