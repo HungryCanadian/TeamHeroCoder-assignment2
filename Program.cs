@@ -277,29 +277,99 @@ namespace PlayerCoder
             else if (TeamHeroCoder.BattleState.heroWithInitiative.jobClass == HeroJobClass.Cleric)
             {
                 activeHero = TeamHeroCoder.BattleState.heroWithInitiative;
+
                 //The character with initiative is a cleric, do something here...
 
                 Console.WriteLine("this is a cleric");
                 Hero target = null;
+                Hero allyHero = null;
+                const int MASS_HEAL_COST = 20;
+                const int RESURRECTION_COST = 25;
+                const int AUTO_LIFE_COST = 25;
 
-                foreach (Hero hero in TeamHeroCoder.BattleState.foeHeroes)
+                float useEtherAmount = 0.3f;
+
+                foreach (Hero allyhero in TeamHeroCoder.BattleState.allyHeroes)
                 {
-                    if (hero.health > 0)
+                    if ((float)allyHero.mana / (float)allyHero.maxMana <= useEtherAmount)
                     {
-                        if (target == null)
-                            target = hero;
-                        else if (hero.health < target.health)
-                            target = hero;
+                        Console.WriteLine("found an Ally with less then 30% mana. do we have an Ether?");
+                        foreach (InventoryItem ii in TeamHeroCoder.BattleState.allyInventory)
+                        {
+                            //How we look THROUGH our inventory
+                            if (ii.item == Item.Ether)
+                            {
+                                Console.WriteLine("We found an Ether in our inventory");
+                            }
+                        }
+                        Console.WriteLine("Shove an Ether down their throat!");
+                        AttemptToPerformAction(Ability.Ether, allyHero);
                     }
                 }
+                foreach (Hero ally in TeamHeroCoder.BattleState.allyHeroes)
+                {
+                    if ((float)ally.health / ally.maxHealth <= 0.3f)
+                    {
+                        Console.WriteLine("We found a wounded ally");
+                        if (activeHero.mana >= MASS_HEAL_COST + RESURRECTION_COST)
+                        {
+                            Console.WriteLine("We have the Mana for Mass heal with enough left over for Resurrection. Casting it.");
+                            //Placeholder calling the function note for us
+                            AttemptToPerformAction(Ability.MassHeal, ally);
+                        }
+                        Console.WriteLine("We dont have enough mana to make sure we can cast resurrection, skipping the heal.");
+                    }
+                }
+                foreach (Hero ally in TeamHeroCoder.BattleState.allyHeroes)
+                {
+                    if (ally.health <= 0)
+                    {
+                        Console.WriteLine("We found a dead ally");
+                        if (activeHero.mana >= RESURRECTION_COST)
+                        {
+                            Console.WriteLine("We have the Mana to revive someone! REVIVE THEM!");
+                            //Placeholder calling the function note for us
+                            AttemptToPerformAction(Ability.Resurrection, ally);
+                        }
+                        Console.WriteLine("We dont have enough mana. skipping");
+                    }
+                }
+                foreach (Hero ally in TeamHeroCoder.BattleState.allyHeroes)
+                {
+                    Console.WriteLine("No Healing or Revive needed. AUTO LIFE EVERYTHING!");
+                    foreach (StatusEffectAndDuration se in ally.statusEffectsAndDurations)
+                    {
+                        if (se.statusEffect != StatusEffect.AutoLife)
+                        {
+                            if (activeHero.mana >= AUTO_LIFE_COST)
+                            {
+                                Console.WriteLine("We have the Mana for Auto Life!");
+                                AttemptToPerformAction(Ability.AutoLife, ally);
+                            }
+                            Console.WriteLine("Everyone has Auto Life or we dont have enough mana!");
+                        }
+                    }
+                }
+                    Console.WriteLine("No Healing or Revive needed. Everyone has Auto life.... ummmmm Hit the weakest person?");
+                    foreach (Hero hero in TeamHeroCoder.BattleState.foeHeroes)
+                    {
+                        if (hero.health > 0)
+                        {
+                            if (target == null)
+                                target = hero;
+                            else if (hero.health < target.health)
+                                target = hero;
+                        }
+                    }
 
-                //This is the line of code that tells Team Hero Coder that we want to perform the attack action and target the foe with the lowest HP
-                TeamHeroCoder.PerformHeroAbility(Ability.Attack, target);
-            }
+
+                    TeamHeroCoder.PerformHeroAbility(Ability.Attack, target);
+                }
             else if (TeamHeroCoder.BattleState.heroWithInitiative.jobClass == HeroJobClass.Wizard)
             {
                 //The character with initiative is a wizard, do something here...
                 activeHero = TeamHeroCoder.BattleState.heroWithInitiative;
+                Hero allyHero = null;
 
                 Console.WriteLine("this is a wizard");
                 Hero target = null;
@@ -328,6 +398,7 @@ namespace PlayerCoder
                 }
 
                 if (activeHero.mana >= POISON_NOVA_COST)
+
                 {
                     Console.WriteLine("Wizard's total MP is greater than the cost of Poison Nova!");
                     foreach (Hero h in TeamHeroCoder.BattleState.foeHeroes)
