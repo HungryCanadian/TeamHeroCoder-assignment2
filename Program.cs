@@ -26,8 +26,9 @@ namespace PlayerCoder
         const int DEFAITH_COST = 10;
         const int FLURRY_OF_BLOWS_COST = 15;
         const int AUTO_LIFE_COST = 25;
-
-        static bool hasPerformedAction = false;
+        const int POISON_NOVA_COST = 15;
+        const int MAGIC_MISSILE_COST = 10;
+        const int METEOR_COST = 60;
 
 
         static public void ProcessAI()
@@ -35,6 +36,11 @@ namespace PlayerCoder
             Console.WriteLine("Processing AI!");
             Hero activeHero = null;
             bool hasPerformedAction = false;
+            bool isSilenced = false;
+            float useEtherAmount = 0.3f;
+            bool hasEther = false;
+            bool hasAutoLife = false;
+            bool hasPoisonEffect = false;
 
             #region Code
             #region Fighter
@@ -72,7 +78,6 @@ namespace PlayerCoder
                 //Things we need to know before we can perform the "Use Ether" action
                 //1: Do we have an ether availabe?
                 Console.WriteLine("CHECK: See if any ally needs an ether (35%/40% Mana remaining.)");
-                bool hasEther = false;
 
                 foreach (InventoryItem item in TeamHeroCoder.BattleState.allyInventory)
                 {
@@ -262,65 +267,58 @@ namespace PlayerCoder
             else if (TeamHeroCoder.BattleState.heroWithInitiative.jobClass == HeroJobClass.Monk)
             {
 
-                bool isSilenced = false;
                 activeHero = TeamHeroCoder.BattleState.heroWithInitiative;
 
                 Console.WriteLine("this is a Monk");
                 Hero target = null;
 
-                foreach (StatusEffectAndDuration se in activeHero.statusEffectsAndDurations)
+                if (HasStatus(activeHero, StatusEffect.Silence))
                 {
-                    if (se.statusEffect == StatusEffect.Silence)
-                    {
-                        Console.WriteLine("We are silenced Shhhh");
-                        isSilenced = true;
-                        break;
-                    }
-                }
-                Console.WriteLine("Checking for Brave!");
-                foreach (Hero hero in TeamHeroCoder.BattleState.foeHeroes)
-                {
-                    
-                    foreach (StatusEffectAndDuration se in hero.statusEffectsAndDurations)
-                    {
-                        if (se.statusEffect == StatusEffect.Brave && activeHero.mana >= DEBRAVE_COST && !isSilenced)
-                        {
-                            Console.WriteLine("Target is Brave. Make them a coward!");
-                            hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Debrave, hero);
-                        }
-                    }
-                }
-                Console.WriteLine("Checking if they have Faith!");
-                foreach (Hero hero in TeamHeroCoder.BattleState.foeHeroes)
-                {
-                    
-                    foreach (StatusEffectAndDuration se in hero.statusEffectsAndDurations)
-                    {
-                        if (se.statusEffect == StatusEffect.Faith && activeHero.mana >= DEFAITH_COST && !isSilenced)
-                        {
-                            Console.WriteLine("Target has Faith. Casting Blasphemy");
-                            hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Defaith, hero);
-                        }
-                    }
-                }
-                Console.WriteLine("Checking if anyone is Poisoned");
-                foreach (Hero hero in TeamHeroCoder.BattleState.foeHeroes)
-                {
-                    
-                    foreach (StatusEffectAndDuration se in hero.statusEffectsAndDurations)
-                    {
-                        if (se.statusEffect == StatusEffect.Poison && activeHero.mana >= FLURRY_OF_BLOWS_COST && !isSilenced)
-                        {
-                            Console.WriteLine("Target is Poisoned. Hit them where it hurts!");
-                            hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.FlurryOfBlows, hero);
-                        }
-                    }
+                    Console.WriteLine("We are silenced Shhhh");
+                    isSilenced = true;
                 }
 
-                Console.WriteLine("No Statuses on Enemy team. Punch lowest health enemy in the face!");
+                Console.WriteLine("Checking for Brave!");
+                foreach (Hero foe in TeamHeroCoder.BattleState.foeHeroes)
+                {
+
+
+                    if (!hasPerformedAction && HasStatus(foe, StatusEffect.Brave) && activeHero.mana >= DEBRAVE_COST && !isSilenced)
+                    {
+                        Console.WriteLine("Target is Brave. Make them a coward!");
+                        if (!hasPerformedAction)
+                            hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Debrave, foe);
+                    }
+
+
+                }
+                Console.WriteLine("Checking if they have Faith!");
+                foreach (Hero foe in TeamHeroCoder.BattleState.foeHeroes)
+                {
+                    if (!hasPerformedAction && HasStatus(foe, StatusEffect.Faith) && activeHero.mana >= DEFAITH_COST && !isSilenced)
+                    {
+                        Console.WriteLine("Target has Faith. Casting Blasphemy");
+                        if (!hasPerformedAction)
+                            hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Defaith, foe);
+                    }
+
+                }
+                Console.WriteLine("Checking if anyone is Poisoned");
+                foreach (Hero foe in TeamHeroCoder.BattleState.foeHeroes)
+                {
+                    if (!hasPerformedAction && HasStatus(foe, StatusEffect.Poison) && activeHero.mana >= FLURRY_OF_BLOWS_COST && !isSilenced)
+                    {
+                        Console.WriteLine("Target is Poisoned. Hit them where it hurts!");
+                        if (!hasPerformedAction)
+                            hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.FlurryOfBlows, foe);
+                    }
+
+                }
+
+
                 foreach (Hero hero in TeamHeroCoder.BattleState.foeHeroes)
                 {
-                    
+
                     if (hero.health > 0)
                     {
                         if (target == null)
@@ -329,7 +327,11 @@ namespace PlayerCoder
                             target = hero;
                     }
                 }
-                hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Attack, target);
+                if (!hasPerformedAction)
+                {
+                    Console.WriteLine("No Statuses on Enemy team. Punch lowest health enemy in the face!");
+                    hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Attack, target);
+                }
             }
             #endregion Monk
             #region Cleric
@@ -342,60 +344,49 @@ namespace PlayerCoder
                 Console.WriteLine("this is a cleric");
                 Hero target = null;
 
-
-                bool isSilenced = false;
-
-                float useEtherAmount = 0.3f;
-
-                bool hasEther = false;
-
-                foreach (StatusEffectAndDuration se in activeHero.statusEffectsAndDurations)
+                if (HasStatus(activeHero, StatusEffect.Silence))
                 {
-                    if (se.statusEffect == StatusEffect.Silence)
-                    {
-                        Console.WriteLine("we are silenced Shhhh");
-                        isSilenced = true;
-                        break;
-                    }
+                    Console.WriteLine("we are silenced Shhhh");
+                    isSilenced = true;
                 }
+
                 Console.WriteLine("Does anyone need healing?");
                 foreach (Hero ally in TeamHeroCoder.BattleState.allyHeroes)
                 {
-                    if ((float)ally.health / ally.maxHealth <= 0.3f)
+                    if (!hasPerformedAction && (float)ally.health / ally.maxHealth <= 0.3f)
                     {
                         Console.WriteLine("We found a wounded ally");
                         if (activeHero.mana >= CURE_SERIOUS_COST + RESURRECTION_COST && ally.health > 0 && !isSilenced)
                         {
                             Console.WriteLine("We have the Mana for Cure Serious with enough left over for Resurrection. Casting it.");
-
                             hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.CureSerious, ally);
+                            break;
                         }
                         Console.WriteLine("We dont have enough mana to make sure we can cast resurrection, skipping the heal.");
                     }
                 }
                 Console.WriteLine("Do we have any Ethers?");
-                foreach (InventoryItem item in TeamHeroCoder.BattleState.allyInventory)
+                if (HasItem(Item.Ether))
                 {
-                    if (item.item == Item.Ether && item.count > 0)
-                    {
-                        Console.WriteLine("We still have Ethers");
-                        hasEther = true;
-                    }
+                    Console.WriteLine("We still have Ethers");
+                    hasEther = true;
                 }
+
 
                 foreach (Hero ally in TeamHeroCoder.BattleState.allyHeroes)
                 {
-                    if ((float)ally.mana / (float)ally.maxMana <= 0.30 && hasEther)
+                    if (!hasPerformedAction && (float)ally.mana / (float)ally.maxMana <= useEtherAmount && hasEther)
                     {
                         Console.WriteLine("An ally is below 30% Mana. Force them to drink!");
-                        hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Ether, ally);
+                        if (!hasPerformedAction)
+                            hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Ether, ally);
 
                     }
                 }
                 Console.WriteLine("is Anyone dead?");
                 foreach (Hero ally in TeamHeroCoder.BattleState.allyHeroes)
                 {
-                    if (ally.health <= 0)
+                    if (!hasPerformedAction && ally.health <= 0)
                     {
                         Console.WriteLine("We found a dead ally");
                         if (activeHero.mana >= RESURRECTION_COST && !isSilenced)
@@ -409,42 +400,37 @@ namespace PlayerCoder
                 Console.WriteLine("No Healing or Revive needed. AUTO LIFE EVERYTHING!");
                 foreach (Hero ally in TeamHeroCoder.BattleState.allyHeroes)
                 {
-                    bool hasAutoLife = false;
-
-                    foreach (StatusEffectAndDuration se in ally.statusEffectsAndDurations)
+                    hasAutoLife = false;
+                    if (!hasPerformedAction && HasStatus(ally, StatusEffect.AutoLife))
                     {
-                        if (se.statusEffect == StatusEffect.AutoLife)
-                        {
-                            Console.WriteLine("We found an ally with Auto Life, skipping this hero");
-                            hasAutoLife = true;
-                            break;
-                        }
+                        Console.WriteLine("We found an ally with Auto Life, skipping this hero");
+                        hasAutoLife = true;
+                        continue;
                     }
 
-                    if (!hasAutoLife)
+                    if (!hasPerformedAction && activeHero.mana >= AUTO_LIFE_COST && !isSilenced && !hasAutoLife)
                     {
-                        if (activeHero.mana >= AUTO_LIFE_COST && !isSilenced)
-                        {
-                            Console.WriteLine("We have the Mana for Auto Life!");
-                            hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.AutoLife, ally);
-                            hasAutoLife = true;
-                        }
+                        Console.WriteLine("Found someone without Autolife and We have the Mana for it!");
+                        hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.AutoLife, ally);
                     }
                 }
-                    Console.WriteLine("No Healing or Revive needed. Everyone has Auto life.... ummmmm Hit the weakest person?");
-                    foreach (Hero hero in TeamHeroCoder.BattleState.foeHeroes)
+
+                foreach (Hero hero in TeamHeroCoder.BattleState.foeHeroes)
+                {
+                    if (hero.health > 0)
                     {
-                        if (hero.health > 0)
-                        {
-                            if (target == null)
-                                target = hero;
-                            else if (hero.health < target.health)
-                                target = hero;
-                        }
+                        if (target == null)
+                            target = hero;
+                        else if (hero.health < target.health)
+                            target = hero;
                     }
+                }
 
-
-                hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Attack, target);
+                if (!hasPerformedAction)
+                {
+                    Console.WriteLine("No Healing or Revive needed. Everyone has Auto life.... ummmmm Hit the weakest person?");
+                    hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Attack, target);
+                }
             }
             #endregion Cleric
             #region Wizard
@@ -455,39 +441,25 @@ namespace PlayerCoder
 
                 Console.WriteLine("this is a wizard");
                 Hero target = null;
-                const int POISON_NOVA_COST = 15;
-                const int MAGIC_MISSILE_COST = 10;
-                const int METEOR_COST = 60;
 
-                bool isSilenced = false;
 
-                float useEtherAmount = 0.3f;
-
-                bool hasEther = false;
-
-                foreach (StatusEffectAndDuration se in activeHero.statusEffectsAndDurations)
+                if (HasStatus(activeHero, StatusEffect.Silence))
                 {
-                    if (se.statusEffect == StatusEffect.Silence)
-                    {
-                        Console.WriteLine("we are silenced Shhhh");
-                        isSilenced = true;
-                        break; // Stop checking once we find Poison
-                    }
+                    Console.WriteLine("we are silenced Shhhh");
+                    isSilenced = true;
                 }
 
+
                 Console.WriteLine("Do we have any Ethers?");
-                foreach (InventoryItem item in TeamHeroCoder.BattleState.allyInventory)
+                if (HasItem(Item.Ether))
                 {
-                    if (item.item == Item.Ether && item.count > 0)
-                    {
-                        Console.WriteLine("We still have Ethers");
-                        hasEther = true;
-                    }
+                    Console.WriteLine("We still have Ethers");
+                    hasEther = true;
                 }
 
                 foreach (Hero ally in TeamHeroCoder.BattleState.allyHeroes)
                 {
-                    if ((float)ally.mana / (float)ally.maxMana <= 0.30 && hasEther)
+                    if (!hasPerformedAction && (float)ally.mana / (float)ally.maxMana <= useEtherAmount && hasEther)
                     {
                         Console.WriteLine("An ally is below 30% Mana. Using an Ether");
                         hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Ether, ally);
@@ -495,26 +467,23 @@ namespace PlayerCoder
                     }
                 }
 
-                if (activeHero.mana >= POISON_NOVA_COST)
+                if (!hasPerformedAction && activeHero.mana >= POISON_NOVA_COST)
                 {
                     Console.WriteLine("Wizard's total MP is greater than the cost of Poison Nova!");
-
+                    Console.WriteLine("Checking for Posioned enemies");
                     foreach (Hero foe in TeamHeroCoder.BattleState.foeHeroes)
                     {
-                        bool hasPoisonEffect = false;
 
-                        Console.WriteLine("Checking for Posioned enemies");
-                        foreach (StatusEffectAndDuration se in foe.statusEffectsAndDurations)
+                        if (!hasPerformedAction && HasStatus(foe, StatusEffect.Poison))
                         {
-                            if (se.statusEffect == StatusEffect.Poison)
-                            {
-                                hasPoisonEffect = true;
-                                break;
-                            }
+                            Console.WriteLine("We found a poisoned enemy");
+                            hasPoisonEffect = true;
+                            break;
                         }
-                        Console.WriteLine("Found someone who isn't poisoned and they are Alive");
-                        if (!hasPoisonEffect && foe.health > 0 && !isSilenced)
+
+                        if (!hasPerformedAction && !hasPoisonEffect && foe.health > 0 && !isSilenced)
                         {
+                            Console.WriteLine("Found someone who isn't poisoned and they are Alive");
                             Console.WriteLine("We have the Mana for Poison Nova!");
                             hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.PoisonNova, foe);
                         }
@@ -536,7 +505,7 @@ namespace PlayerCoder
                 }
 
                 // Use Meteor if 2 or more foes are still standing
-                if (standingFoes.Count >= 2 && activeHero.mana >= METEOR_COST && !isSilenced)
+                if (!hasPerformedAction && standingFoes.Count >= 1 && activeHero.mana >= METEOR_COST && !isSilenced)
                 {
                     Console.WriteLine("More than 2 foes standing, Make them regret it! METEOR!");
                     hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Meteor, target);
@@ -554,14 +523,19 @@ namespace PlayerCoder
                     }
                 }
 
-                Console.WriteLine("Nothing to do! Targeting enemy with lowest HP");
-                if (activeHero.mana >= MAGIC_MISSILE_COST && !isSilenced)
+
+                if (!hasPerformedAction && activeHero.mana >= MAGIC_MISSILE_COST && !isSilenced)
                 {
+                    Console.WriteLine("Nothing to do! Targeting enemy with lowest HP");
                     Console.WriteLine("Magic Missile!");
                     hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.MagicMissile, target);
                 }
-                Console.WriteLine("out of Mana! hit them with your stick!");
-                hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Attack, target);
+                if (!hasPerformedAction)
+                {
+                    Console.WriteLine("Nothing to do! Targeting enemy with lowest HP");
+                    Console.WriteLine("out of Mana! hit them with your stick!");
+                    hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Attack, target);
+                }
             }
             #endregion Wizard
             #region samplecode
@@ -599,6 +573,25 @@ namespace PlayerCoder
                 return true;
             }
 
+            return false;
+        }
+
+        static public bool HasStatus(Hero hero, StatusEffect effect)
+        {
+            foreach (StatusEffectAndDuration se in hero.statusEffectsAndDurations)
+            {
+                if (se.statusEffect == effect) return true;
+            }
+
+            return false;
+        }
+
+        static public bool HasItem(Item item)
+        {
+            foreach (InventoryItem ii in TeamHeroCoder.BattleState.allyInventory)
+            {
+                if (ii.item == item && ii.count > 0) return true;
+            }
             return false;
         }
     }
