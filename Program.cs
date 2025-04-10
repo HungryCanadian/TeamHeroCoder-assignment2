@@ -30,6 +30,7 @@ namespace PlayerCoder
         const int MAGIC_MISSILE_COST = 10;
         const int METEOR_COST = 60;
         const int QUICK_CLEANSE_COST = 10;
+        const int FAITH_COST = 15;
 
 
         static public void ProcessAI()
@@ -38,6 +39,7 @@ namespace PlayerCoder
             Hero activeHero = null;
             bool hasPerformedAction = false;
             bool isSilenced = false;
+            bool hasDebrave = false;
             float useEtherAmount = 0.3f;
             bool hasEther = false;
             bool hasAutoLife = false;
@@ -285,9 +287,14 @@ namespace PlayerCoder
                     Console.WriteLine("Checking for Brave!");
                     foreach (Hero foe in TeamHeroCoder.BattleState.foeHeroes)
                     {
+                        hasDebrave = false;
+                        if (HasStatus(foe, StatusEffect.Debrave))
+                        {
+                            Console.WriteLine("Already made them Cowards!");
+                            hasDebrave = true;
+                        }
 
-
-                        if (HasStatus(foe, StatusEffect.Brave) && activeHero.mana >= DEBRAVE_COST && !isSilenced)
+                        if (HasStatus(foe, StatusEffect.Brave) && activeHero.mana >= DEBRAVE_COST && !isSilenced && !hasDebrave)
                         {
                             if (!hasPerformedAction)
                             {
@@ -404,13 +411,31 @@ namespace PlayerCoder
                 {
                     foreach (Hero ally in TeamHeroCoder.BattleState.allyHeroes)
                     {
-                        if ((float)ally.mana / (float)ally.maxMana <= useEtherAmount && hasEther)
+                        if ((float)ally.mana / (float)ally.maxMana <= useEtherAmount && hasEther && ally.health > 0)
                         {
 
                             if (!hasPerformedAction)
                             {
                                 Console.WriteLine("An ally is below 30% Mana. Force them to drink!");
                                 hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Ether, ally);
+                            }
+                        }
+                    }
+                }
+                if (!hasPerformedAction)
+                {
+                    Console.WriteLine("Does the Wizard or I need Faith?");
+                    foreach (Hero ally in TeamHeroCoder.BattleState.allyHeroes)
+                    {
+                        if (ally.jobClass == HeroJobClass.Wizard)
+                        {
+                            if (!HasStatus(ally, StatusEffect.Faith) && activeHero.mana >= FAITH_COST && !isSilenced && ally.health > 0)
+                            {
+                                if (!hasPerformedAction)
+                                {
+                                    Console.WriteLine("Target is not Faithed. Throw the Bible at them!");
+                                    hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Faith, ally);
+                                }
                             }
                         }
                     }
@@ -462,9 +487,10 @@ namespace PlayerCoder
                     }
                     if (!hasPerformedAction)
                     {
+                        Console.WriteLine("Checking for petrifying or petrified");
                         foreach (Hero ally in TeamHeroCoder.BattleState.allyHeroes)
                         {
-                            Console.WriteLine("Checking for petrifying or petrified");
+                            
                             if (HasStatus(ally, StatusEffect.Petrifying) || HasStatus(ally, StatusEffect.Petrified))
                             {
                                 Console.WriteLine("We found petrified or petrifying. They are Dirty! clean them!");
@@ -556,7 +582,7 @@ namespace PlayerCoder
                 {
                     foreach (Hero ally in TeamHeroCoder.BattleState.allyHeroes)
                     {
-                        if ((float)ally.mana / (float)ally.maxMana <= useEtherAmount && hasEther)
+                        if ((float)ally.mana / (float)ally.maxMana <= useEtherAmount && hasEther && ally.health > 0)
                         {
                             Console.WriteLine("An ally is below 30% Mana. Using an Ether");
                             hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Ether, ally);
@@ -588,12 +614,13 @@ namespace PlayerCoder
                                 hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.PoisonNova, foe);
                             }
                         }
+                        else
+                        {
+                            Console.WriteLine("Not enough mana for Poison Nova!");
+                        }
                     }
                 }
-                else
-                {
-                    Console.WriteLine("Not enough mana for Poison Nova!");
-                }
+                
 
                 if (!hasPerformedAction)
                 {
@@ -611,7 +638,7 @@ namespace PlayerCoder
                     if (standingFoes.Count >= 1 && activeHero.mana >= METEOR_COST && !isSilenced)
                     {
                         Console.WriteLine("More than 2 foes standing, Make them regret it! METEOR!");
-                        hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Meteor, target);
+                        hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Meteor);
                         return;
                     }
 
@@ -669,7 +696,7 @@ namespace PlayerCoder
         }
 
         #region Functions
-        static public bool AttemptToPerformAction(bool hasPerformedAction, Ability ability, Hero target)
+        static public bool AttemptToPerformAction(bool hasPerformedAction, Ability ability, Hero target = null)
         {
             if (!hasPerformedAction)
             {
