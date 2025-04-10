@@ -29,6 +29,7 @@ namespace PlayerCoder
         const int POISON_NOVA_COST = 15;
         const int MAGIC_MISSILE_COST = 10;
         const int METEOR_COST = 60;
+        const int QUICK_CLEANSE_COST = 10;
 
 
         static public void ProcessAI()
@@ -354,6 +355,7 @@ namespace PlayerCoder
             else if (TeamHeroCoder.BattleState.heroWithInitiative.jobClass == HeroJobClass.Cleric)
             {
                 activeHero = TeamHeroCoder.BattleState.heroWithInitiative;
+                int statusEffectCount = 0;
 
                 //The character with initiative is a cleric, do something here...
 
@@ -384,7 +386,10 @@ namespace PlayerCoder
                                     break;
                                 }
                             }
-                            Console.WriteLine("We dont have enough mana to make sure we can cast resurrection, skipping the heal.");
+                            else
+                            {
+                                Console.WriteLine("We dont have enough mana to make sure we can cast resurrection, skipping the heal.");
+                            }
                         }
                     }
                 }
@@ -399,13 +404,35 @@ namespace PlayerCoder
                 {
                     foreach (Hero ally in TeamHeroCoder.BattleState.allyHeroes)
                     {
-                        if (!hasPerformedAction && (float)ally.mana / (float)ally.maxMana <= useEtherAmount && hasEther)
+                        if ((float)ally.mana / (float)ally.maxMana <= useEtherAmount && hasEther)
                         {
 
                             if (!hasPerformedAction)
                             {
                                 Console.WriteLine("An ally is below 30% Mana. Force them to drink!");
                                 hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Ether, ally);
+                            }
+                        }
+                    }
+                }
+                if (!hasPerformedAction)
+                {
+                    Console.WriteLine("Checking for Negative Status effects");
+                    foreach (Hero ally in TeamHeroCoder.BattleState.allyHeroes)
+                    {
+                        if (GetNegativeStatusEffectCount(ally) >= 1)
+                        {
+                            if (activeHero.mana >= QUICK_CLEANSE_COST && !isSilenced)
+                            {
+                                if (!hasPerformedAction)
+                                {
+                                    Console.WriteLine("Target has Several Negative Ailments. Cleanse them!");
+                                    hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.QuickCleanse, ally);
+                                }
+                            }
+                            else
+                            {
+                              Console.WriteLine("We don't have enough mana to cast QuickCleanse, or we are silenced.");
                             }
                         }
                     }
@@ -426,9 +453,32 @@ namespace PlayerCoder
                                     Console.WriteLine("We have the Mana to revive someone! REVIVE THEM!");
                                     hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Resurrection, ally);
                                 }
-                                Console.WriteLine("We dont have enough mana. skipping");
+                                else
+                                {
+                                    Console.WriteLine("We dont have enough mana. skipping");
+                                }
                             }
                         }
+                    }
+                    if (!hasPerformedAction)
+                    {
+                        foreach (Hero ally in TeamHeroCoder.BattleState.allyHeroes)
+                        {
+                            Console.WriteLine("Checking for petrifying or petrified");
+                            if (HasStatus(ally, StatusEffect.Petrifying) || HasStatus(ally, StatusEffect.Petrified))
+                            {
+                                Console.WriteLine("We found petrified or petrifying. They are Dirty! clean them!");
+                                if (activeHero.mana >= QUICK_CLEANSE_COST && !isSilenced)
+                                {
+                                    if (!hasPerformedAction)
+                                    hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.QuickCleanse, ally);
+                                }
+                                else if (activeHero.mana < QUICK_CLEANSE_COST || isSilenced)
+                                {
+                                    Console.WriteLine("We don't have enough mana to cast QuickCleanse, or we are silenced.");
+                                }
+                            }
+                        } 
                     }
                     if (!hasPerformedAction)
                     {
@@ -451,6 +501,10 @@ namespace PlayerCoder
                                     Console.WriteLine("Found someone without Autolife and We have the Mana for it!");
                                     hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.AutoLife, ally);
                                 }
+                            }
+                            else
+                            {
+                                Console.WriteLine("We don't have enough mana to cast Auto Life, or we are silenced.");
                             }
                         }
                     }
@@ -586,35 +640,35 @@ namespace PlayerCoder
                     hasPerformedAction = AttemptToPerformAction(hasPerformedAction, Ability.Attack, target);
                 }
             }
-                #endregion Wizard
-                #region samplecode
-                foreach (InventoryItem ii in TeamHeroCoder.BattleState.allyInventory)
+            #endregion Wizard
+            #region samplecode
+            foreach (InventoryItem ii in TeamHeroCoder.BattleState.allyInventory)
+            {
+                //How we look THROUGH our inventory
+                if (ii.item == Item.Potion)
                 {
-                    //How we look THROUGH our inventory
-                    if (ii.item == Item.Potion)
-                    {
-                        //We found a potion
-                    }
+                    //We found a potion
                 }
-
-
-                //Searching for a poisoned hero 
-                foreach (Hero hero in TeamHeroCoder.BattleState.allyHeroes)
-                {
-                    foreach (StatusEffectAndDuration se in hero.statusEffectsAndDurations)
-                    {
-                        if (se.statusEffect == StatusEffect.Poison)
-                        {
-                            //We have found a character that is poisoned, do something here...
-                        }
-                    }
-                }
-                #endregion samplecode
-                #endregion
-
             }
-        
 
+
+            //Searching for a poisoned hero 
+            foreach (Hero hero in TeamHeroCoder.BattleState.allyHeroes)
+            {
+                foreach (StatusEffectAndDuration se in hero.statusEffectsAndDurations)
+                {
+                    if (se.statusEffect == StatusEffect.Poison)
+                    {
+                        //We have found a character that is poisoned, do something here...
+                    }
+                }
+            }
+            #endregion samplecode
+            #endregion
+
+        }
+
+        #region Functions
         static public bool AttemptToPerformAction(bool hasPerformedAction, Ability ability, Hero target)
         {
             if (!hasPerformedAction)
@@ -644,5 +698,23 @@ namespace PlayerCoder
             }
             return false;
         }
+
+        static public int GetNegativeStatusEffectCount(Hero hero)
+        {
+            int statusEffectCount = 0;
+            foreach (StatusEffectAndDuration se in hero.statusEffectsAndDurations)
+            {
+                if (se.statusEffect == StatusEffect.Defaith) statusEffectCount++;
+                if (se.statusEffect == StatusEffect.Debrave) statusEffectCount++;
+                if (se.statusEffect == StatusEffect.Doom) statusEffectCount++;
+                if (se.statusEffect == StatusEffect.Petrifying) statusEffectCount++;
+                if (se.statusEffect == StatusEffect.Petrified) statusEffectCount++;
+                if (se.statusEffect == StatusEffect.Silence) statusEffectCount++;
+                if (se.statusEffect == StatusEffect.Poison) statusEffectCount++;
+                if (se.statusEffect == StatusEffect.Slow) statusEffectCount++;
+            }
+            return statusEffectCount;
+        }
+        #endregion Functions
     }
 }
